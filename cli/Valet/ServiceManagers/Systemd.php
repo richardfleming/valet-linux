@@ -31,6 +31,7 @@ class Systemd implements ServiceManager
         $services = is_array($services) ? $services : func_get_args();
 
         foreach ($services as $service) {
+            $this->enable($this->getRealService($service));
             info("Starting $service...");
             $this->cli->quietly('sudo systemctl start ' . $this->getRealService($service));
         }
@@ -63,6 +64,7 @@ class Systemd implements ServiceManager
         $services = is_array($services) ? $services : func_get_args();
 
         foreach ($services as $service) {
+            $this->enable($this->getRealService($service));
             info("Restarting $service...");
             $this->cli->quietly('sudo systemctl restart ' . $this->getRealService($service));
         }
@@ -116,6 +118,21 @@ class Systemd implements ServiceManager
             return $output != '';
         } catch (DomainException $e) {
             return false;
+        }
+    }
+
+    /**
+     * Determine if service is enabled on the system and enable if not.
+     *
+     * @return void
+     */
+    function enable($service)
+    {
+        $enabled = strpos($this->cli->run('systemctl list-unit-files | grep enabled | grep ' . $service), $service);
+
+        if (! $enabled) {
+            $this->cli->run('systemctl enable ' . $service);
+            info("Enabled {$service}...");
         }
     }
 
