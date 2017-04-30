@@ -9,6 +9,7 @@ use Valet\Contracts\ServiceManager;
 use Valet\PackageManagers\Apt;
 use Valet\PackageManagers\Dnf;
 use Valet\PackageManagers\Pacman;
+use Valet\PackageManagers\Yum;
 use Valet\ServiceManagers\Systemd;
 use Valet\ServiceManagers\LinuxService;
 
@@ -57,22 +58,6 @@ class Valet
             $this->files->unlink($this->sudoers);
         }
     }
-
-    /**
-     * Create the "sudoers.d" entry for running Valet.
-     *
-     * @return void
-     */
-//     function createSudoersEntry()
-//     {
-//         $this->files->ensureDirExists('/etc/sudoers.d');
-
-//         $this->files->put($this->sudoers, 'Cmnd_Alias VALET = '.$this->valetBin.' *
-// %sudo ALL=(root) NOPASSWD: VALET'.PHP_EOL.'
-// %wheel ALL=(root) NOPASSWD: VALET'.PHP_EOL);
-
-//         $this->cli->quietly('chmod 0440 '.$this->sudoers);
-//     }
 
     /**
      * Get the paths to all of the Valet extensions.
@@ -140,6 +125,7 @@ class Valet
             Apt::class,
             Dnf::class,
             Pacman::class,
+            Yum::class,
         ])->first(function ($pm) {
             return resolve($pm)->isAvailable();
         }, function () {

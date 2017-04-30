@@ -29,44 +29,38 @@ class DnsMasqTest extends TestCase
 
     public function test_install_calls_the_right_methods_and_restarts()
     {
-        $files = Mockery::mock(CommandLine::class);
-        $cli = Mockery::mock(Filesystem::class);
+        $cli = Mockery::mock(CommandLine::class);
+        $files = Mockery::mock(Filesystem::class);
         $sm = Mockery::mock(ServiceManager::class);
         $pm = Mockery::mock(PackageManager::class);
 
-        $dnsMasq = Mockery::mock(DnsMasq::class.'[dnsmasqSetup,createCustomConfigFile]', [$pm, $sm, $cli, $files]);
+        $dnsMasq = Mockery::mock(DnsMasq::class.'[dnsmasqSetup,createCustomConfigFile]', [$pm, $sm, $files, $cli]);
 
         $dnsMasq->shouldReceive('dnsmasqSetup')->once();
         $dnsMasq->shouldReceive('createCustomConfigFile')->once()->with('dev');
         $pm->shouldReceive('dnsmasqRestart')->once()->with($sm);
         $dnsMasq->install();
-
-        $dnsMasq->shouldReceive('dnsmasqSetup')->once();
-        $dnsMasq->shouldReceive('createCustomConfigFile')->once()->with('test');
-        $pm->shouldReceive('dnsmasqRestart')->once()->with($sm);
-        $dnsMasq->install('test');
     }
 
     public function test_dnsmasqSetup_correctly_installs_and_configures_dnsmasq_control_to_networkmanager()
     {
-        copy(__DIR__ . '/files/NetworkManager.conf', __DIR__ . '/output/NetworkManager.conf');
-
         $pm = Mockery::mock(PackageManager::class);
         $pm->shouldReceive('ensureInstalled')->once()->with('dnsmasq');
         $sm = Mockery::mock(ServiceManager::class);
+        $files = resolve(StubForFiles::class);
 
         swap(PackageManager::class, $pm);
         swap(ServiceManager::class, $sm);
+        swap(Filesystem::class, $files);
 
         $dnsMasq = resolve(DnsMasq::class);
-        $dnsMasq->nmConfigPath = __DIR__ . '/output/NetworkManager.conf';
+        $dnsMasq->nmConfigPath = __DIR__ . '/output/valet.conf';
 
         $dnsMasq->dnsmasqSetup();
 
         $this->assertSame('[main]
 dns=dnsmasq
-test-contents
-', file_get_contents(__DIR__ . '/output/NetworkManager.conf'));
+', file_get_contents(__DIR__ . '/output/valet.conf'));
     }
 
     public function test_createCustomConfigFile_correctly_creates_valet_dns_config_file()
@@ -92,8 +86,18 @@ test-contents
         $cli = Mockery::mock(Filesystem::class);
         $files = Mockery::mock(CommandLine::class);
 
-        $dnsMasq = Mockery::mock(DnsMasq::class.'[install]', [$pm, $sm, $cli, $files]);
-        $dnsMasq->shouldReceive('install')->with('new');
+        $dnsMasq = Mockery::mock(DnsMasq::class.'[createCustomConfigFile]', [$pm, $sm, $cli, $files]);
+
+        $dnsMasq->shouldReceive('createCustomConfigFile')->once()->with('new');
+        $pm->shouldReceive('dnsmasqRestart')->once()->with($sm);
         $dnsMasq->updateDomain('old', 'new');
+    }
+}
+
+class StubForFiles extends Filesystem
+{
+    function ensureDirExists($path, $owner = null, $mode = 0755)
+    {
+        return;
     }
 }
